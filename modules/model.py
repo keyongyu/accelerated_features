@@ -53,6 +53,7 @@ class XFeatModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.norm = nn.InstanceNorm2d(1)
+        self.pixel_unshuffle = nn.PixelUnshuffle(8)
 
         ########### ⬇️ CNN Backbone & Heads ⬇️ ###########
 
@@ -147,10 +148,11 @@ class XFeatModel(nn.Module):
 
         """
         # dont backprop through normalization
-        with torch.no_grad():
-            x = x.mean(dim=1, keepdim=True)
-            x = self.norm(x)
+        # with torch.no_grad():
+        #     x = x.mean(dim=1, keepdim=True)
+        #     x = self.norm(x)
 
+        x = self.norm(x)
         # main backbone
         x1 = self.block1(x)
         x2 = self.block2(x1 + self.skip1(x))
@@ -165,6 +167,9 @@ class XFeatModel(nn.Module):
 
         # heads
         heatmap = self.heatmap_head(feats)  # Reliability map
-        keypoints = self.keypoint_head(self._unfold2d(x, ws=8))  # Keypoint map logits
+        x_unfolded = self.pixel_unshuffle(x)
+
+        keypoints = self.keypoint_head(x_unfolded)  # Keypoint map logits
+        # keypoints = self.keypoint_head(self._unfold2d(x, ws=8)) #Keypoint map logits
 
         return feats, keypoints, heatmap

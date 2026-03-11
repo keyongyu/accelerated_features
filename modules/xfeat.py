@@ -13,7 +13,6 @@ import tqdm
 from modules.interpolator import InterpolateSparse2d
 from modules.model import *
 
-
 class XFeat(nn.Module):
     """
     Implements the inference module for XFeat.
@@ -52,7 +51,7 @@ class XFeat(nn.Module):
             pass
 
     @torch.inference_mode()
-    def detectAndCompute(self, x, top_k=None, detection_threshold=None):
+    def detectAndComputeOrig(self, x, top_k=None, detection_threshold=None):
         """
         Compute sparse keypoints & descriptors. Supports batched mode.
 
@@ -113,6 +112,174 @@ class XFeat(nn.Module):
             }
             for b in range(B)
         ]
+
+    @torch.inference_mode()
+    def detectAndCompute(self, image, top_k=None, detection_threshold=None):
+        """
+        Compute sparse keypoints & descriptors. Supports batched mode.
+
+        input:
+                x -> torch.Tensor(B, C, H, W): grayscale or rgb image
+                top_k -> int: keep best k features
+        return:
+                List[Dict]:
+                        'keypoints'    ->   torch.Tensor(N, 2): keypoints (x,y)
+                        'scores'       ->   torch.Tensor(N,): keypoint scores
+                        'descriptors'  ->   torch.Tensor(N, 64): local features
+        """
+        # 1. Setup hyperparameters and preprocess
+        top_k = top_k if top_k is not None else self.top_k
+        threshold = (
+            detection_threshold
+            if detection_threshold is not None
+            else self.detection_threshold
+        )
+
+        # Preprocess returns normalized tensor and scaling factors (height/width ratios)
+        x, height_ratio, width_ratio = self.preprocess_tensor(image)
+        batch_size, _, img_h, img_w = x.shape
+
+        # 2. Forward pass through the network
+        # raw_descriptors (M1), raw_keypoints (K1), and reliability_map (H1)
+        raw_descriptors, raw_keypoints, reliability_map = self.net(x)
+
+        # Normalize descriptors to unit length (L2)
+        descriptors_mapped = F.normalize(raw_descriptors, dim=1)
+
+        # 3. Extract keypoints from heatmap using NMS
+        keypoint_heatmap = self.get_kpts_heatmap(raw_keypoints)
+        detected_kpts = self.NMS(keypoint_heatmap, threshold=threshold, kernel_size=5)
+
+        # 4. Calculate final scores
+        # Combines keypoint confidence (nearest neighbor) with reliability (bilinear interpolation)
+        _nearest = InterpolateSparse2d("nearest")
+        _bilinear = InterpolateSparse2d("bilinear")
+
+        kpt_conf = _nearest(keypoint_heatmap, detected_kpts, img_h, img_w)
+        reliability = _bilinear(reliability_map, detected_kpts, img_h, img_w)
+        scores = (kpt_conf * reliability).squeeze(-1)
+        # scores = (keypoint_heatmap* reliability_map).squeeze(-1)
+
+        # Mask out invalid keypoints (where coordinates are 0)
+        scores[torch.all(detected_kpts == 0, dim=-1)] = -1
+
+        # 5. Top-K Selection
+        # Sort scores in descending order and select top indices
+        top_indices = torch.argsort(-scores, dim=-1)[:, :top_k]
+
+        # Gather coordinates based on top indices
+        kpts_x = torch.gather(detected_kpts[..., 0], -1, top_indices)
+        kpts_y = torch.gather(detected_kpts[..., 1], -1, top_indices)
+        top_kpts = torch.cat([kpts_x[..., None], kpts_y[..., None]], dim=-1)
+        top_scores = torch.gather(scores, -1, top_indices)
+
+        # 6. Sample descriptors at keypoint locations
+        top_descriptors = self.interpolator(
+            descriptors_mapped, top_kpts, H=img_h, W=img_w
+        )
+        top_descriptors = F.normalize(top_descriptors, dim=-1)
+        # print(f"top_descriptors shape {top_descriptors.shape}");
+        # 7. Scale keypoints back to original image size
+        scale_factors = torch.tensor(
+            [width_ratio, height_ratio], device=top_kpts.device
+        )
+        top_kpts = top_kpts * scale_factors.view(1, 1, 2)
+
+        # 8. Filter valid features and return as a list of dictionaries
+        is_valid = top_scores > 0
+        results = []
+        for b in range(batch_size):
+            batch_valid = is_valid[b]
+            results.append(
+                {
+                    "keypoints": top_kpts[b][batch_valid],
+                    "scores": top_scores[b][batch_valid],
+                    "descriptors": top_descriptors[b][batch_valid],
+                }
+            )
+
+        return results
+
+    @torch.inference_mode()
+    def detectAndComputeNCNN(self, x, thr=0.05):
+        """
+        Compute dense weighted scores and descriptors for NCNN-style inference.
+
+        Input:
+                x: torch.Tensor(B, C, H, W) - The input image tensor.
+        Returns:
+                weighted_scores: torch.Tensor(B, 1, H, W) - Combined heatmap.
+                descriptor_map:  torch.Tensor(B, H, W, 64) - L2-normalized features.
+        """
+        # 1. Preprocess and get scaling ratios
+        # x_norm is the tensor ready for the network
+        # thr = torch.tensor(0.95)
+        x_norm, height_ratio, width_ratio = self.preprocess_tensor(x)
+        batch_size, _, target_h, target_w = x_norm.shape
+
+        # 2. Forward Pass
+        # Outputs are usually downsampled by a factor (e.g., 8x)
+        # (B, 64, H/8, W/8), logits: (B, 65, H/8, W/8), low_res_heatmap: (B, 1, H/8, W/8)
+        low_res_descriptor_map, keypoint_logits, low_res_heatmap = self.net(x_norm)
+
+        # 3. Normalize Descriptors
+        # Ensures each descriptor vector has a unit length of 1
+        low_res_descriptor_map = F.normalize(low_res_descriptor_map, dim=1)
+
+        # descriptor_map = low_res_descriptor_map
+
+        # 4. Process Keypoint Heatmap (B, 1, H, W)
+        # Converts classification logits (usually 65 channels) into a dense 2D heatmap
+        keypoint_heatmap = self.get_kpts_heatmap(keypoint_logits)
+
+        # print(f"mask count={torch.count_nonzero(mask)}")
+        # 5. Upsample Reliability Map (B, 1, H, W)
+        # Bilinear upsampling to match the original input resolution
+        reliability_map = F.interpolate(
+            low_res_heatmap,
+            size=(target_h, target_w),
+            mode="bilinear",
+            align_corners=False,
+        )
+
+        # 6. Calculate Final Weighted Scores
+        # Combine keypoint confidence with reliability scores
+        mask = self.get_heatmap_mask(keypoint_heatmap, thr)
+        print(f"MASK SHAPE: {mask.shape}")
+        print(f"reliability_map: {reliability_map.shape}")
+        print(f"keypoint_heatmap: {keypoint_heatmap.shape}")
+        # (B,1, H, W)
+        weighted_scores = keypoint_heatmap * reliability_map * mask
+        # weighted_scores = keypoint_heatmap * reliability_map
+        # weighted_scores = weighted_scores * mask
+        # weighted_scores = keypoint_heatmap * reliability_map
+        weighted_scores = weighted_scores.squeeze(1)
+
+        # (B, H, W, 64)
+        descriptor_map = F.interpolate(
+            low_res_descriptor_map,
+            size=(target_h, target_w),
+            mode="bilinear",
+            align_corners=False,
+        )
+        descriptor_map = F.normalize(descriptor_map, dim=1)
+        descriptor_map = descriptor_map.permute(0, 2, 3, 1)
+
+        # (B, H, W) ,  (B, H, W, 64 )
+        return weighted_scores, descriptor_map
+
+        # mask2 = weighted_scores >0.2
+        # print("reliability_map")
+        # print(reliability_map[mask2])
+        # print("keypoint_heatmap")
+        # print(keypoint_heatmap[mask2])
+
+        # weighted_scores = keypoint_heatmap * reliability_map * mask
+        # print(f"111 weighted_scores shape: {weighted_scores.shape}")
+        # weighted_scores= weighted_scores.squeeze(1)
+        # print(f"222 weighted_scores shape: {weighted_scores.shape}")
+        # (B,1, H, W) ,  (B, H, W, 64 )
+        # return weighted_scores, descriptor_map
 
     @torch.inference_mode()
     def detectAndComputeDense(self, x, top_k=None, multiscale=True):
@@ -269,11 +436,35 @@ class XFeat(nn.Module):
         return x, rh, rw
 
     def get_kpts_heatmap(self, kpts, softmax_temp=1.0):
-        scores = F.softmax(kpts * softmax_temp, 1)[:, :64]
+        x = F.softmax(kpts * softmax_temp, 1)
+        # [BATCH_SIZE, 65, H//8, W//8]
+        scores = x[:, :64, :, :]
         B, _, H, W = scores.shape
-        heatmap = scores.permute(0, 2, 3, 1).reshape(B, H, W, 8, 8)
-        heatmap = heatmap.permute(0, 1, 3, 2, 4).reshape(B, 1, H * 8, W * 8)
+        scores = scores.permute(0, 2, 3, 1).reshape(B, H, W, 8, 8)
+        heatmap = scores.permute(0, 1, 3, 2, 4).reshape(B, 1, H * 8, W * 8)
         return heatmap
+
+    def get_heatmap_mask(self, kpt_heatmap, thr=0.05):
+        B, _, H, W = kpt_heatmap.shape
+        kernel_size = 5
+        # threshold = 0.95
+        pad = kernel_size // 2
+        local_max = nn.MaxPool2d(kernel_size=kernel_size, stride=1, padding=pad)(
+            kpt_heatmap
+        )
+        # mask = (kpt_heatmap == local_max) & (kpt_heatmap > thr)
+
+        diff = local_max - kpt_heatmap
+        is_max_mask = 1.0 - torch.clamp(diff * 1e4, 0.0, 1.0)
+
+        # 2. Simulate (kpt_heatmap > 0.2)
+        # Logic: (heat - 0.2) * 1e6, then clamp to [0, 1]
+        # Anything 0.200001 becomes 1.0, anything 0.19999 becomes 0.0
+        is_over_threshold_mask = torch.clamp((kpt_heatmap - thr) * 1e4, 0.0, 1.0)
+
+        # 3. Combine with multiplication (Logical AND)
+        mask = is_max_mask * is_over_threshold_mask
+        return mask
 
     def NMS(self, x, threshold=0.05, kernel_size=5):
         B, _, H, W = x.shape

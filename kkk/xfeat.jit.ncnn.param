@@ -1,0 +1,112 @@
+7767517
+110 118
+Input                    in0                      0 1 in0
+InstanceNorm             in_24                    1 1 in0 1 0=1 1=1.000000e-05 2=0
+Split                    splitncnn_0              1 3 1 2 3 4
+Convolution              conv_58                  1 1 4 5 0=4 1=3 11=3 12=1 13=1 14=1 2=1 3=1 4=1 5=0 6=36
+BatchNorm                bn_1                     1 1 5 6 0=4 1=1.000000e-05
+ReLU                     relu_29                  1 1 6 7
+Convolution              conv_59                  1 1 7 8 0=8 1=3 11=3 12=1 13=2 14=1 2=1 3=2 4=1 5=0 6=288
+BatchNorm                bn_2                     1 1 8 9 0=8 1=1.000000e-05
+ReLU                     relu_30                  1 1 9 10
+Convolution              conv_60                  1 1 10 11 0=8 1=3 11=3 12=1 13=1 14=1 2=1 3=1 4=1 5=0 6=576
+BatchNorm                bn_3                     1 1 11 12 0=8 1=1.000000e-05
+ReLU                     relu_31                  1 1 12 13
+Convolution              conv_61                  1 1 13 14 0=24 1=3 11=3 12=1 13=2 14=1 2=1 3=2 4=1 5=0 6=1728
+BatchNorm                bn_4                     1 1 14 15 0=24 1=1.000000e-05
+ReLU                     relu_32                  1 1 15 16
+Pooling                  avgpool2d_0              1 1 2 17 0=1 1=4 11=4 12=4 13=0 2=4 3=0 5=1 6=1
+Convolution              conv_62                  1 1 17 18 0=24 1=1 11=1 12=1 13=1 14=0 2=1 3=1 4=0 5=1 6=24
+BinaryOp                 add_0                    2 1 16 18 19 0=0
+Convolution              conv_63                  1 1 19 20 0=24 1=3 11=3 12=1 13=1 14=1 2=1 3=1 4=1 5=0 6=5184
+BatchNorm                bn_5                     1 1 20 21 0=24 1=1.000000e-05
+ReLU                     relu_33                  1 1 21 22
+Convolution              conv_64                  1 1 22 23 0=24 1=3 11=3 12=1 13=1 14=1 2=1 3=1 4=1 5=0 6=5184
+BatchNorm                bn_6                     1 1 23 24 0=24 1=1.000000e-05
+ReLU                     relu_34                  1 1 24 25
+Convolution              conv_65                  1 1 25 26 0=64 1=3 11=3 12=1 13=2 14=1 2=1 3=2 4=1 5=0 6=13824
+BatchNorm                bn_7                     1 1 26 27 0=64 1=1.000000e-05
+ReLU                     relu_35                  1 1 27 28
+Convolution              conv_66                  1 1 28 29 0=64 1=3 11=3 12=1 13=1 14=1 2=1 3=1 4=1 5=0 6=36864
+BatchNorm                bn_8                     1 1 29 30 0=64 1=1.000000e-05
+ReLU                     relu_36                  1 1 30 31
+Convolution              conv_67                  1 1 31 32 0=64 1=1 11=1 12=1 13=1 14=0 2=1 3=1 4=0 5=0 6=4096
+BatchNorm                bn_9                     1 1 32 33 0=64 1=1.000000e-05
+ReLU                     relu_37                  1 1 33 34
+Split                    splitncnn_1              1 2 34 35 36
+Convolution              conv_68                  1 1 36 37 0=64 1=3 11=3 12=1 13=2 14=1 2=1 3=2 4=1 5=0 6=36864
+BatchNorm                bn_10                    1 1 37 38 0=64 1=1.000000e-05
+ReLU                     relu_38                  1 1 38 39
+Convolution              conv_69                  1 1 39 40 0=64 1=3 11=3 12=1 13=1 14=1 2=1 3=1 4=1 5=0 6=36864
+BatchNorm                bn_11                    1 1 40 41 0=64 1=1.000000e-05
+ReLU                     relu_39                  1 1 41 42
+Convolution              conv_70                  1 1 42 43 0=64 1=3 11=3 12=1 13=1 14=1 2=1 3=1 4=1 5=0 6=36864
+BatchNorm                bn_12                    1 1 43 44 0=64 1=1.000000e-05
+ReLU                     relu_40                  1 1 44 45
+Split                    splitncnn_2              1 2 45 46 47
+Convolution              conv_71                  1 1 47 48 0=128 1=3 11=3 12=1 13=2 14=1 2=1 3=2 4=1 5=0 6=73728
+BatchNorm                bn_13                    1 1 48 49 0=128 1=1.000000e-05
+ReLU                     relu_41                  1 1 49 50
+Convolution              conv_72                  1 1 50 51 0=128 1=3 11=3 12=1 13=1 14=1 2=1 3=1 4=1 5=0 6=147456
+BatchNorm                bn_14                    1 1 51 52 0=128 1=1.000000e-05
+ReLU                     relu_42                  1 1 52 53
+Convolution              conv_73                  1 1 53 54 0=128 1=3 11=3 12=1 13=1 14=1 2=1 3=1 4=1 5=0 6=147456
+BatchNorm                bn_15                    1 1 54 55 0=128 1=1.000000e-05
+ReLU                     relu_43                  1 1 55 56
+Convolution              conv_74                  1 1 56 57 0=64 1=1 11=1 12=1 13=1 14=0 2=1 3=1 4=0 5=0 6=8192
+BatchNorm                bn_16                    1 1 57 58 0=64 1=1.000000e-05
+ReLU                     relu_44                  1 1 58 59
+Interp                   upsample_54              1 1 46 60 0=2 3=92 4=92 6=0
+Interp                   upsample_55              1 1 59 61 0=2 3=92 4=92 6=0
+BinaryOp                 add_1                    2 1 35 60 62 0=0
+BinaryOp                 add_2                    2 1 62 61 63 0=0
+Convolution              conv_75                  1 1 63 64 0=64 1=3 11=3 12=1 13=1 14=1 2=1 3=1 4=1 5=0 6=36864
+BatchNorm                bn_17                    1 1 64 65 0=64 1=1.000000e-05
+ReLU                     relu_45                  1 1 65 66
+Convolution              conv_76                  1 1 66 67 0=64 1=3 11=3 12=1 13=1 14=1 2=1 3=1 4=1 5=0 6=36864
+BatchNorm                bn_18                    1 1 67 68 0=64 1=1.000000e-05
+ReLU                     relu_46                  1 1 68 69
+Convolution              conv_77                  1 1 69 70 0=64 1=1 11=1 12=1 13=1 14=0 2=1 3=1 4=0 5=1 6=4096
+Split                    splitncnn_3              1 2 70 71 72
+Convolution              conv_78                  1 1 72 73 0=64 1=1 11=1 12=1 13=1 14=0 2=1 3=1 4=0 5=0 6=4096
+BatchNorm                bn_19                    1 1 73 74 0=64 1=1.000000e-05
+ReLU                     relu_47                  1 1 74 75
+Convolution              conv_79                  1 1 75 76 0=64 1=1 11=1 12=1 13=1 14=0 2=1 3=1 4=0 5=0 6=4096
+BatchNorm                bn_20                    1 1 76 77 0=64 1=1.000000e-05
+ReLU                     relu_48                  1 1 77 78
+Convolution              convsigmoid_0            1 1 78 79 0=1 1=1 11=1 12=1 13=1 14=0 2=1 3=1 4=0 5=1 6=64 9=4
+Reorg                    pixelunshuffle_28        1 1 3 80 0=8 1=0
+Convolution              conv_81                  1 1 80 81 0=64 1=1 11=1 12=1 13=1 14=0 2=1 3=1 4=0 5=0 6=4096
+BatchNorm                bn_21                    1 1 81 82 0=64 1=1.000000e-05
+ReLU                     relu_49                  1 1 82 83
+Convolution              conv_82                  1 1 83 84 0=64 1=1 11=1 12=1 13=1 14=0 2=1 3=1 4=0 5=0 6=4096
+BatchNorm                bn_22                    1 1 84 85 0=64 1=1.000000e-05
+ReLU                     relu_50                  1 1 85 86
+Convolution              conv_83                  1 1 86 87 0=64 1=1 11=1 12=1 13=1 14=0 2=1 3=1 4=0 5=0 6=4096
+BatchNorm                bn_23                    1 1 87 88 0=64 1=1.000000e-05
+ReLU                     relu_51                  1 1 88 89
+Convolution              conv_84                  1 1 89 90 0=65 1=1 11=1 12=1 13=1 14=0 2=1 3=1 4=0 5=1 6=4160
+Normalize                normalize_26             1 1 71 91 0=0 1=1 2=1.000000e-12 3=1 4=1 9=1
+Softmax                  softmax_53               1 1 90 92 0=0 1=1
+Crop                     slice_0                  1 1 92 93 -23310=1,64 -23311=1,0 -23309=1,0
+Permute                  permute_85               1 1 93 94 0=3
+Reshape                  reshape_88               1 1 94 95 0=8 1=8 11=92 2=92
+Permute                  permute_86               1 1 95 96 0=2
+Reshape                  reshape_89               1 1 96 97 0=736 1=736 2=1
+Split                    splitncnn_4              1 4 97 98 99 100 101
+Interp                   upsample_56              1 1 79 102 0=2 3=736 4=736 6=0
+Pooling                  maxpool2d_25             1 1 101 103 0=0 1=5 11=5 12=1 13=2 2=1 3=2 5=1
+BinaryOp                 sub_3                    2 1 103 98 104 0=1
+BinaryOp                 mul_4                    1 1 104 105 0=2 1=1 2=10000.0
+Clip                     clamp_90                 1 1 105 106 0=0.0 1=1.0
+BinaryOp                 sub_5                    1 1 99 107 0=1 1=1 2=0.05
+BinaryOp                 mul_6                    1 1 107 108 0=2 1=1 2=10000.0
+Clip                     clamp_91                 1 1 108 109 0=0.0 1=1.0
+BinaryOp                 sub_7                    1 1 106 110 0=7 1=1 2=1.0
+BinaryOp                 mul_8                    2 1 110 109 111 0=2
+BinaryOp                 mul_9                    2 1 100 102 112 0=2
+BinaryOp                 mul_10                   2 1 112 111 113 0=2
+Squeeze                  squeeze_92               1 1 113 out0 -23303=1,0
+Interp                   upsample_57              1 1 91 115 0=2 3=736 4=736 6=0
+Normalize                normalize_27             1 1 115 116 0=0 1=1 2=1.000000e-12 3=1 4=1 9=1
+Permute                  permute_87               1 1 116 out1 0=3

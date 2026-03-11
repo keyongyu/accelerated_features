@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Run project",
+    "command": "python3",
+    "argsx": ["${file}"],
+    "args": ["{$file}"],
+    "use_new_terminal": false,
+    "shell": "system",
+  },
+]
